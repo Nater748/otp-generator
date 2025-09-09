@@ -13,27 +13,31 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $request->validate([
-            'name' => 'required',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6',
-        ]);
+    $request->validate([
+        'name' => 'required',
+        'email' => 'required|email|unique:users',
+        'password' => 'required|min:6',
+    ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+    $user = User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+    ]);
 
-        // Generate OTP
-        $otp = rand(100000, 999999);
-        $user->otp = Hash::make($otp);
-        $user->otp_expires_at = now()->addMinutes(10);
-        $user->save();
+    // Generate OTP
+    $otp = rand(100000, 999999);
+    $user->otp = Hash::make($otp);
+    $user->otp_expires_at = now()->addMinutes(10);
+    $user->save();
 
-        Mail::to($user->email)->send(new OtpMail($otp));
+    // Send OTP directly (inline, no Mailable class)
+    Mail::raw("Your OTP is: {$otp}", function ($message) use ($user) {
+        $message->to($user->email)
+                ->subject('Your OTP Code');
+    });
 
-        return response()->json(['message' => 'User registered. OTP sent.'], 201);
+    return response()->json(['message' => 'User registered. OTP sent.'], 201);
     }
 
     // Verify OTP
